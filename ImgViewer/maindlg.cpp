@@ -3,8 +3,6 @@
 
 #include "dialog.h"
 
-#define toKor(str) QString::fromLocal8Bit(str)
-
 MainDlg::MainDlg(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::MainDlg)
@@ -12,6 +10,7 @@ MainDlg::MainDlg(QWidget *parent) :
     ui->setupUi(this);
     ui->label->setAlignment(Qt::AlignCenter);
     ui->label_2->setAlignment(Qt::AlignCenter);
+    setWindowTitle("Select Pole");
 
 
     m_strInstallPath =  GETDLG() ->m_strInstallPath;
@@ -105,17 +104,22 @@ void MainDlg::on_b_pole_list_currentRowChanged(int currentRow)
 
 void MainDlg::on_pushButton_clicked()
 {
+    QMessageBox reply;
+    reply.setWindowTitle("Report");
+    reply.setIcon(QMessageBox::Icon::Information);
+    reply.setDefaultButton(QMessageBox::Ok);
     if (GETDLG()->check){
-    QMessageBox::information(this,"Success", "Normal Report Create");
-    this->close();
+        reply.setText(toKor("Normal Report Create"));
+        reply.exec();
+        reply.button(QMessageBox::Ok)->animateClick(2000);
     }
     else
     {
-
-        QMessageBox::information(this,"Success", "Error Report Create");
-
-        this->close();
+        reply.setText("Select bad part");
+        reply.exec();
     }
+
+    this->close();
 }
 
 

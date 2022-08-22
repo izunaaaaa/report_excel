@@ -18,6 +18,7 @@
 #include "xlsxworkbook.h"
 #include <algorithm>
 #include "maindlg.h"
+#include "error_select.h"
 #include <QPainter>
 #include <QPen>
 
@@ -50,20 +51,18 @@ public:
     QImage back_pole();
     QString front_img_time;
     QString back_img_time;
-
+    QPixmap pixmap;
     MainDlg *m_pMainDlg;
-    bool check;
-
+    error_select *m_error;
+    bool check;  
 
 private slots:
     void on_btn_open_clicked();
-
     void on_btn_excel_clicked();
-
     void on_rd_normal_clicked();
-
     void on_rd_error_clicked();
 
+    void on_verticalSlider_valueChanged(int value);
 
 protected:
     void dragEnterEvent(QDragEnterEvent* event);
@@ -72,16 +71,41 @@ protected:
     void error_report();
     void normal_report();
     bool navi_cam();
-
     QImage navi_img;
     QImage navi_img_2;
+    int zoom_level;
+
+    QImage mDisplayImage;
+
+    int m_nPosX;
+    int m_nPosY;
+    int m_nImgWidth;
+    int m_nImgHeight;
+
+    float m_fStepX;
+    float m_fStepY;
+    float m_fZoom;
+
+
+    bool m_bMouseDown;
+    int m_nMousePosX;
+    int m_nMousePosY;
+
+
+    void OnDisplay();
+
+
+    void mouseMoveEvent(QMouseEvent *event);
+    void mousePressEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
+    void wheelEvent(QWheelEvent *event);
 
 private:
     Ui::Dialog *ui;
-    QImage thisImage, scaleImage, zoomImage;
 };
 
 #endif // DIALOG_H
 
 extern Dialog       *g_pDlg;
 #define GETDLG()    g_pDlg
+#define toKor(str) QString::fromLocal8Bit(str)

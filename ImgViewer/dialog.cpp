@@ -1,9 +1,8 @@
 #include "dialog.h"
 #include "ui_dialog.h"
 #include <iostream>
-#include <exception>
 
-#define toKor(str) QString::fromLocal8Bit(str)
+
 
 Dialog *g_pDlg = nullptr;
 
@@ -25,6 +24,17 @@ Dialog::Dialog(QWidget *parent) :
     img_time_hhmm = "";
     img_time_hhmmss = "";
 
+    m_nPosX = 0;
+    m_nPosY =0;
+    m_nImgWidth=0;
+    m_nImgHeight=0;
+
+    m_fStepX=0;
+    m_fStepY=0;
+    m_fZoom=1;
+    m_nMousePosX=0;
+    m_nMousePosY=0;
+    ui->verticalSlider->hide();
 }
 
 Dialog::~Dialog()
@@ -127,15 +137,15 @@ void Dialog::dropEvent(QDropEvent *event) // 이미지 드롭
             QString strPath = path.toLocalFile().right(4).toLower();
             if (strPath == ".jpg")
             {
-                QPixmap pixmap;
+//                QPixmap pixmap;
                 QImageReader reader;
                 reader.setFileName(path.toLocalFile());
                 mImage = reader.read();
                 pixmap = QPixmap::fromImage(mImage.scaled(ui->label->width(), ui->label->height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
 
                 ui->label->setPixmap(pixmap);
+                ui->verticalSlider->show();
 
-                setWindowTitle(path.toLocalFile());
                 QFileInfo fileInfo(path.toLocalFile());
 
                 m_strImageFileName = fileInfo.fileName();
@@ -162,7 +172,7 @@ void Dialog::on_btn_open_clicked() // 버튼 클릭 이벤트
     if (fileName.isEmpty())
         return;
 
-    QPixmap pixmap;
+//    QPixmap pixmap;
     QImageReader reader;
 
     reader.setFileName(fileName);
@@ -175,8 +185,7 @@ void Dialog::on_btn_open_clicked() // 버튼 클릭 이벤트
     m_strImageFileName = fileInfo.fileName();
     img_time_hhmm = m_strImageFileName.left(4) + "00";
     img_time_hhmmss = m_strImageFileName.left(6);
-
-
+    ui->verticalSlider->show();
 }
 
 void Dialog::on_rd_normal_clicked()  // 라디오 버튼 Normal
@@ -267,12 +276,11 @@ void Dialog::error_report() // 불량 보고서 작성
 {
        // 앞 전주 이미지
        QImage f_pole = front_pole();
-
        // 뒷 전주 이미지
        QImage b_pole = back_pole();
 
        QMessageBox reply;
-       reply.setWindowTitle(toKor("사진을 확인하고 전주를 선택하세요"));
+       reply.setWindowTitle(toKor("전주를 선택하세요"));
        reply.setText(toKor("기본 선택 사진은 선택한 사진의 50번째 앞 / 뒤 사진입니다."));
        reply.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
        reply.setDefaultButton(QMessageBox::Ok);
@@ -284,6 +292,9 @@ void Dialog::error_report() // 불량 보고서 작성
            //전주 선택 ui
            MainDlg mainDlg;
            mainDlg.exec();
+
+           error_select error;
+           error.exec();
 
            ui->label_2->setText(toKor("불량 전선 보고서 작성"));
            ui->progressBar->show();
@@ -305,6 +316,8 @@ void Dialog::error_report() // 불량 보고서 작성
               int pole_num = 222222;
               QString date;
 
+              ui->label_2->setText(toKor("전주 정보 삽입"));
+              ui->progressBar->setValue(5);
               xlsx.write("E2", computerized_num, format);
               xlsx.write("N2", line_name, format);
               xlsx.write("S2", pole_num , format);
@@ -313,15 +326,6 @@ void Dialog::error_report() // 불량 보고서 작성
               xlsx.write("S3", pole_num , format);
               xlsx.write("N4", img_date, format);
 
-              ui->label_2->setText(toKor("전주 정보 삽입"));
-              ui->progressBar->setValue(5);
-
-
-           //insert image
-           QImage img = mImage.scaled(ui->label->width()+945, ui->label->height()+360, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-           xlsx.insertImage(103, 1, img);
-
-           ui->label_2->setText(toKor("불량 이미지 삽입"));
            ui->progressBar->setValue(8);
 
            // insert pole
@@ -351,9 +355,9 @@ void Dialog::error_report() // 불량 보고서 작성
                  ui->label_2->setText(toKor("불량 전선 위치 표시"));
 
                  QPainter painter(&line);
-                 painter.setPen(QPen(Qt::red,10));
+                 painter.setPen(QPen(Qt::red,10,Qt::PenStyle::DotLine));
                  painter.drawRect(0,0,line.width()-1,line.height()-1);
-
+                 painter.end();
                }
 
                if (i % 6 == 0)
@@ -381,12 +385,9 @@ void Dialog::error_report() // 불량 보고서 작성
                    xlsx.insertImage(93 + i/6*5 , 17, line);
                }
 
-
-
            }
 
            //inser navi_img
-
            front_img_time = all_list.at(mainDlg.front_pole_idx).split('/').back().left(6);
            back_img_time = all_list.at(mainDlg.back_pole_idx).split('/').back().left(6);
 
@@ -394,12 +395,12 @@ void Dialog::error_report() // 불량 보고서 작성
            if(navi_cam()==true)
            {
 //           navi_cam();
-           navi_img = navi_img.scaled(ui->label->width()+20, ui->label->height()+180, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-           navi_img_2 = navi_img_2.scaled(ui->label->width()+20, ui->label->height()+180, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+           navi_img = navi_img.scaled(ui->label->width()+25, ui->label->height()+180, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+           navi_img_2 = navi_img_2.scaled(ui->label->width()+25, ui->label->height()+180, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 
            QPainter navi_line(&navi_img);
            QPainter navi_line_2(&navi_img_2);
-           QPen pen(Qt::red,2,Qt::PenStyle::DotLine);
+           QPen pen(Qt::red,4,Qt::PenStyle::DotLine);
 
            navi_line.setPen(pen);
 
@@ -420,8 +421,29 @@ void Dialog::error_report() // 불량 보고서 작성
            xlsx.insertImage(7,1,navi_img);
            xlsx.insertImage(7,11,navi_img_2);
 
+           navi_line.end();
+           navi_line_2.end();
            ui->progressBar->setValue(95);
            }
+           //insert image
+
+           QImage img = mImage;
+           QPainter line_line(&img);
+           line_line.setPen(QPen(Qt::red,35,Qt::PenStyle::DotLine));
+           line_line.drawRect(error.m_nPosX, error.m_nPosY, error.m_nImgWidth, error.m_nImgHeight);
+           line_line.end();
+           img = img.scaled(ui->label->width()+945, ui->label->height()+370, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+           xlsx.insertImage(103, 1, img);
+
+           mDisplayImage = error.mDisplayImage.scaled(img.width(),img.height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+           xlsx.insertImage(126, 1, mDisplayImage);
+
+           if (mDisplayImage.isNull())
+           {
+                QMessageBox::information(this,"Error", toKor("불량 부분이 선택되지 않았습니다."));
+           }
+
+           ui->label_2->setText(toKor("불량 이미지 삽입"));
 
            //save excel
            xlsx.saveAs(m_strInstallPath + "/../report/" + "E_Report.xlsx");
@@ -446,12 +468,12 @@ void Dialog::normal_report() // 정상 보고서 작성
 {
        // 앞 전주 이미지
        QImage f_pole = front_pole();
-
        // 뒷 전주 이미지
        QImage b_pole = back_pole();
 
        QMessageBox reply;
-       reply.setWindowTitle(toKor("사진을 확인하고 전주를 선택하세요"));
+       reply.setIcon(QMessageBox::Icon::Information);
+       reply.setWindowTitle(toKor("전주를 선택하세요"));
        reply.setText(toKor("기본 선택 사진은 선택한 사진의 50번째 앞 / 뒤 사진입니다."));
        reply.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
        reply.setDefaultButton(QMessageBox::Ok);
@@ -521,7 +543,7 @@ void Dialog::normal_report() // 정상 보고서 작성
                }
                else if (i % 3 == 1)
                {
-                   line = line.scaled(500,400,Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                   line = line.scaled(520,400,Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
                    xlsx.insertImage(94 + i/3*10 , 8, line);
                }
                else if (i % 3 == 2)
@@ -599,3 +621,107 @@ void Dialog::on_btn_excel_clicked()   // 보고서 작성 버튼 클릭
    }
 }
 
+void Dialog::mouseMoveEvent(QMouseEvent *event)
+{
+    if (m_bMouseDown == true)
+    {
+        if (!mImage.isNull())
+        {
+            float fStepX = event->x() - m_nMousePosX;
+            float fStepY = event->y() - m_nMousePosY;
+            fStepX *= m_fStepX;
+            fStepY *= m_fStepY;
+
+            m_nPosX -= fStepX;
+            m_nPosY -= fStepY;
+
+            OnDisplay();
+        }
+
+        m_nMousePosX = event->x();
+        m_nMousePosY = event->y();
+    }
+}
+
+void Dialog::mousePressEvent(QMouseEvent *event)
+{
+    if(event->button() == Qt::LeftButton)
+    {
+        m_bMouseDown = true;
+        m_nMousePosX = event->x();
+        m_nMousePosY = event->y();
+    }
+}
+
+void Dialog::mouseReleaseEvent(QMouseEvent *event)
+{
+    m_bMouseDown = false;
+}
+
+void Dialog::wheelEvent(QWheelEvent *event)
+{
+    if (mImage.isNull() )
+        return;
+
+    if (event->x() >= ui->label->x() && event->x() <= ui->label->width() + ui->label->x()
+            && event->y() >= ui->label->y() && event->y() <= ui->label->height() + ui->label->y())
+    {
+        if(event->delta() < 0)
+        {
+            int nDelta = event->delta() * -1;
+            float fStep =float(nDelta / 120.0 * 0.01);
+            m_fZoom += fStep;
+            if (m_fZoom > 1.0)
+                m_fZoom = 1.0;
+        }
+        else if(event->delta() > 0)
+        {
+            int nDelta = event->delta();
+            float fStep = float(nDelta / 120.0 * 0.01);
+            m_fZoom -= fStep;
+            if (m_fZoom < 0.1)
+                m_fZoom = 0.1;
+        }
+        else
+            return;
+
+        m_nImgWidth = int(mImage.width() * m_fZoom);
+        m_nImgHeight = int(mImage.height() * m_fZoom);
+
+        OnDisplay();
+    }
+}
+
+void Dialog::OnDisplay()
+{
+    if (m_nPosX < 0)
+        m_nPosX = 0;
+
+    if (m_nPosY < 0)
+        m_nPosY = 0;
+
+    if (m_nPosX + m_nImgWidth > mImage.width())
+        m_nPosX = mImage.width() - m_nImgWidth;
+
+    if (m_nPosY + m_nImgHeight > mImage.height())
+        m_nPosY = mImage.height() - m_nImgHeight;
+
+    m_fStepX = float(m_nImgWidth) / float(ui->label->width());
+    m_fStepY = float(m_nImgHeight) / float(ui->label->height());
+    mDisplayImage = mImage.copy(m_nPosX, m_nPosY, m_nImgWidth, m_nImgHeight);
+    qDebug() << m_nPosX << m_nPosY << m_nImgWidth << m_nImgHeight;
+    QPixmap pixmap = QPixmap::fromImage(mDisplayImage.scaled(ui->label->width(), ui->label->height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    ui->label->setPixmap(pixmap);
+
+    ui->label_3->setAlignment(Qt::AlignCenter);
+    ui->label_3->setStyleSheet("QLabel { background-color : white; color : black; }");
+    ui->label_3->setText(QString::number(int((1.01-double(m_fZoom))* 100)));
+}
+void Dialog::on_verticalSlider_valueChanged(int value)
+{
+    //    ui->label_2->setNum(double(value)/10);
+    m_fZoom = (110 - float(value))/100 ;;
+    m_nImgWidth = int(mImage.width() * m_fZoom);
+    m_nImgHeight = int(mImage.height() * m_fZoom);
+    OnDisplay();
+}

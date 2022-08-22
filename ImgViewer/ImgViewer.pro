@@ -29,16 +29,19 @@ DEFINES += CUDNN OPENCV
 CONFIG += c++11
 
 SOURCES += \
+        error_select.cpp \
         main.cpp \
         dialog.cpp \
         maindlg.cpp
 
 HEADERS += \
         dialog.h \
+        error_select.h \
         maindlg.h
 
 FORMS += \
         dialog.ui \
+        error_select.ui \
         maindlg.ui
 
 QXLSX_PARENTPATH=../Qxlsx/
